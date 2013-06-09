@@ -14,10 +14,33 @@ func (message *Message) toJSON() (string, error) {
 	return string(j), err
 }
 
-type ChatStorage struct {
-	Messages []*Message
+type ChatInstance struct {
+	Messages    []*Message
+	connections map[*Connection]bool
+
+	broadcast  chan string
+	register   chan *Connection
+	unregister chan *Connection
 }
 
-func (storage *ChatStorage) AddMessage(message *Message) {
-	storage.Messages = append(storage.Messages, message)
+func (instance *ChatInstance) AddMessage(message *Message) {
+	instance.Messages = append(instance.Messages, message)
+}
+
+func (instance *ChatInstance) run() {
+	for {
+		select {
+		case c := <-instance.register:
+			instance.connections[c] = true
+
+		case c := <-instance.unregister:
+			delete(instance.connections, c)
+			close(c.sendQueue)
+
+		case m := <-instance.broadcast:
+			for c := range instance.connections {
+				c.sendQueue <- m
+			}
+		}
+	}
 }

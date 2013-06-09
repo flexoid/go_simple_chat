@@ -2,13 +2,14 @@ package main
 
 import (
 	"code.google.com/p/go.net/websocket"
+	"encoding/json"
 	"fmt"
 )
 
 type Connection struct {
 	ws        *websocket.Conn
 	sendQueue chan string
-	chat      ChatStorage
+	chat      *ChatInstance
 }
 
 const (
@@ -17,23 +18,24 @@ const (
 
 func (conn *Connection) reader() {
 	var message string
+	var err error
 
 	for {
-		err := websocket.Message.Receive(conn.ws, &message)
+		err = websocket.Message.Receive(conn.ws, &message)
 		if err != nil {
 			fmt.Errorf("Receive error: %s\n", err)
 			break
 		}
 
-		chatMessage := &Message{Text: message}
-		chat.AddMessage(chatMessage)
-
-		j, err := chatMessage.toJSON()
+		var chatMessage Message
+		err = json.Unmarshal([]byte(message), &chatMessage)
 		if err != nil {
-			fmt.Errorf("JSON marshaling error: %s\n", err)
+			fmt.Errorf("JSON unmarchaling error: %s\n", err)
 			continue
 		}
-		conn.sendQueue <- j + "\r\n"
+
+		chat.AddMessage(&chatMessage)
+		conn.chat.broadcast <- message
 	}
 
 	conn.ws.Close()
@@ -54,7 +56,6 @@ func (conn *Connection) sendLastMessages() {
 	if len(conn.chat.Messages)-HIST_SIZE > 0 {
 		from = len(conn.chat.Messages) - HIST_SIZE
 	}
-	fmt.Printf("History %d\n", from)
 	for _, message := range conn.chat.Messages[from:] {
 		data, err := message.toJSON()
 		if err == nil {
