@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+  <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+  <style type="text/css">
+    #chat-area {
+      width: 100%;
+      min-height: 300px;
+    }
+    span.author {
+      display: block;
+    }
+    .message {
+      padding-bottom: 15px;
+    }
+  </style>
+  <title>Go Simple Chat</title>
+</head>
+<body>
+
+  <div class="container-fluid">
+    <div class="row-fluid">
+      <div class="span8">
+
+        <div id="message-list">
+        </div>
+
+        <form id="message">
+          <input type="text" id="author">
+          <br>
+          <textarea id="text"></textarea>
+          <br>
+          <button type="submit" class="btn">Send</button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+  <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+  <script>
+    var socket = new WebSocket("ws://" + document.location.host + "/ws");
+    socket.onopen = function() {
+    };
+
+    socket.onmessage = function(event) {
+      var data = JSON.parse(event.data);
+      var message_list = $("#message-list")
+      if (isArray(data)) {
+        $.each(data, function(_, message) {
+          message_list.append(messageTemplate(message));
+        });
+      } else {
+        message_list.append(messageTemplate(data));
+      }
+    };
+
+    $('#message').submit(function() {
+      var author = $('#message #author')[0].value;
+      var text = $('#message #text')[0].value;
+      var data = JSON.stringify({"Author": author, "Text": text});
+      socket.send(data);
+      $('#message #text')[0].value = "";
+      return false;
+    });
+
+    var messageTemplate = function(message) {
+      // return "<tr><td>" + message.Author + "</td><td>" + message.Text + "</td></tr>"
+      return "<div class=\"message\"><span class=\"label author\">" + message.Author + "</span>" + message.Text + "</div>"
+    };
+
+    var isArray = function(obj) {
+      return Object.prototype.toString.call(obj) === '[object Array]';
+    };
+
+  </script>
+</body>
+</html>

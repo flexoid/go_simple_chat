@@ -2,8 +2,8 @@ package main
 
 import (
 	"code.google.com/p/go.net/websocket"
-	"fmt"
 	"net/http"
+	"text/template"
 )
 
 var (
@@ -13,10 +13,11 @@ var (
 		unregister:  make(chan *Connection),
 		connections: make(map[*Connection]bool),
 	}
+	homeTempl = template.Must(template.ParseFiles("home.html"))
 )
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Access to %s", r.URL)
+	homeTempl.Execute(w, r.Host)
 }
 
 func WsServer(ws *websocket.Conn) {
@@ -29,7 +30,7 @@ func WsServer(ws *websocket.Conn) {
 }
 
 func main() {
-	// http.HandleFunc("/", handler)
+	http.HandleFunc("/", handler)
 	http.Handle("/ws", websocket.Handler(WsServer))
 	go chat.run()
 	http.ListenAndServe(":8080", nil)

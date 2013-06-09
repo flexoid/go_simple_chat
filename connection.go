@@ -56,10 +56,10 @@ func (conn *Connection) sendLastMessages() {
 	if len(conn.chat.Messages)-HIST_SIZE > 0 {
 		from = len(conn.chat.Messages) - HIST_SIZE
 	}
-	for _, message := range conn.chat.Messages[from:] {
-		data, err := message.toJSON()
+	if len(conn.chat.Messages[from:]) > 0 {
+		data, err := json.Marshal(conn.chat.Messages[from:])
 		if err == nil {
-			conn.sendQueue <- data + "\r\n"
+			conn.sendQueue <- string(data) + "\r\n"
 		}
 	}
 }
